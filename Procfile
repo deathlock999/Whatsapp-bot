@@ -1,1 +1,3 @@
-web: python bot.py !$PORT # PORT NUMBER 443
+web: python app.py
+
+worker: celery -A tasks worker -l info
