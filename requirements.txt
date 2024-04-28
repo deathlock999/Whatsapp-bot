@@ -1,3 +1,5 @@
 deep-translator==1.11.4
 gspread==6.1.0
 requests==2.31.0
+Flask
+celery
