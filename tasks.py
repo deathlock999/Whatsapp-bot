@@ -1,6 +1,7 @@
 from celery import Celery
 from celery.schedules import crontab
 
+
 app = Celery('tasks', broker='redis://redis:6379/0')  # Adjust if using a different service name or port
 api_token = "fGQJvjbzsCUPB7QtImHL8okh7QEPnpzm"
 
@@ -12,30 +13,24 @@ group_id = "120363261013619385@g.us"
 sheet_id = "1ddIhjrBUJaA7Rc0oZTzc4wf1Tn6_ABn-fB8GTZD4YNQ"
 worksheet_name = "Sheet1"
 answers = []
-correct_ans_set = []
+
+
 
 @app.task
 def run_bot():
-    for z in range(1,5):
-        last_question_index = update_index_file()
-        print(last_question_index)
-        data=get_data_from_sheets(sheet_id, worksheet_name, last_question_index)
-        if data:
-            question = data["question"]
-            answers = data["answers"]
-            correct_answer = data["correct_answer"]
-            send_poll(question, answers)
-            #correct answer...
-            correct_ans_set.append(correct_answer)
-            answers.clear()
-            time.sleep(1800) 
-    send_message(api_token, group_id, correct_ans_set)              
-    correct_ans_set.clear() 
-    time.sleep(1800)     
-    print("...one circle...")
-    
+    last_question_index = update_index_file()
+    data = get_data_from_sheets(sheet_id, worksheet_name, last_question_index)
+    if data:
+        question = data["question"]
+        answers = data["answers"]
+        correct_answer = data["correct_answer"]
+        send_poll(question, answers)
+        answers.clear()
+        time.sleep(1800)
+        send_message(api_token, group_id, correct_answer)
+        time.sleep(1800)
+    return "Bot execution complete!"
 
-    return "Bot execution complete!"  # Optional return value for monitoring
 
 def update_index_file():
   try:
@@ -126,7 +121,7 @@ def send_poll(question,answers):
 
     print(response.text)
 
-def send_message(api_token, group_id, correct_ans_set):
+def send_message(api_token, group_id, correct_answer):
     """
     Sends a message containing the correct answers to the specified WhatsApp group.
 
@@ -138,17 +133,13 @@ def send_message(api_token, group_id, correct_ans_set):
     Returns:
         dict (or None): Response dictionary from the API call, or None if an error occurs.
     """
-    print(f"Correct answers: {correct_ans_set}")
 
     base_url = "https://gate.whapi.cloud/"
     endpoint = "messages/text"
 
     # Build the message dynamically based on the number of correct answers
-    message = f"**නිවැරදි පිළිතුරු**\n"
-    for i, answer in enumerate(correct_ans_set):
-        message += f"{i+1}. {answer}\n"
+    message = f"**නිවැරදි පිළිතුරු**\n1.{correct_answer}"
 
-    correct_ans_set.clear()  # Clear the list for future use
 
     headers = {
         "Authorization": f"Bearer {api_token}"
@@ -169,13 +160,11 @@ def send_message(api_token, group_id, correct_ans_set):
         return None  # Indicate an error
 
 
-# **Configure periodic task with djcelery**
-from djcelery.schedulers import Scheduler
 
-sched = Scheduler(app=app)
-
-@sched.schedule(crontab(minute='*/30'))  # Run every 30 minutes
-def run_bot_periodic():
-    run_bot.delay()  # Delay task execution for efficiency
-
-sched.install()
+# Configure Celery Beat scheduler
+app.conf.beat_schedule = {
+    "run_bot_task": {
+        "task": "tasks.run_bot",
+        "schedule": crontab(minute='*/60'),  # Run every 60 minutes
+    }
+}
