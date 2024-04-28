@@ -2,6 +2,9 @@ from flask import Flask, request  # Import Flask and request object
 
 app = Flask(__name__)
 
+@app.route('/')
+def index():
+    return "Welcome server!"
 # Route to trigger the bot execution
 @app.route('/run_bot', methods=['POST'])
 def run_bot_task():
