@@ -1,8 +1,0 @@
-services:
-  background-worker:
-    type: background-worker
-    # Replace 'python bot.py' with the actual command to run your script
-    command: python bot.py
-    # (Optional) Additional configurations for your background worker
-    # environment:  # Define environment variables
-    # scale:        # Set concurrency for the worker (default: 1)
